@@ -229,20 +229,47 @@ button, .btn, [class*="button"] {
 
 /* ===== 登录页 ===== */
 .login-screen {
-  background: linear-gradient(135deg, #f5edd8 0%, #ede3c8 100%) !important;
+  background: linear-gradient(135deg, #141423 0%, #0d0d18 50%, #1a1a2e 100%) !important;
+}
+
+/* 登录页光晕球 — 金色调 */
+.login-screen .login-orb-1 {
+  background: radial-gradient(circle, rgba(255,215,0,0.15), transparent 70%) !important;
+}
+.login-screen .login-orb-2 {
+  background: radial-gradient(circle, rgba(212,168,75,0.12), transparent 70%) !important;
+}
+.login-screen .login-orb-3 {
+  background: radial-gradient(circle, rgba(232,197,71,0.1), transparent 70%) !important;
 }
 
 .login-logo-svg {
-  filter: drop-shadow(0 4px 20px rgba(139, 0, 0, 0.15));
+  filter: drop-shadow(0 4px 20px rgba(255, 215, 0, 0.15));
 }
 
-/* 登录页logo — 整体金色外发光（光晕/鼠标跟随由login.js的径向渐变控制） */
+/* 登录页logo — 整体金色外发光 */
 .login-screen .login-logo-svg {
-  filter: drop-shadow(0 0 20px rgba(255, 200, 60, 0.2)) drop-shadow(0 0 40px rgba(255, 180, 40, 0.1));
+  filter: drop-shadow(0 0 20px rgba(255, 200, 60, 0.25)) drop-shadow(0 0 40px rgba(255, 180, 40, 0.15));
 }
 /* 玻璃块悬停效果 */
 .login-screen .login-glass:hover {
   stroke: #ffd700 !important;
+}
+
+/* 登录页文字 — 金色 */
+.login-screen .login-brand-name {
+  color: #ffd700 !important;
+  text-shadow: 0 0 30px rgba(255,215,0,0.3);
+}
+.login-screen .login-brand-tag {
+  color: rgba(255,215,0,0.5) !important;
+}
+.login-screen .scroll-hint .scroll-arrow {
+  border-left-color: rgba(255,215,0,0.5) !important;
+  border-bottom-color: rgba(255,215,0,0.5) !important;
+}
+.login-screen .scroll-hint .scroll-text {
+  color: rgba(255,215,0,0.4) !important;
 }
 
 /* ===== 滚动条 ===== */
