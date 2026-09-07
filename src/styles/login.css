@@ -134,3 +134,8 @@
 
 /* 滚动模糊渐显动效 */
 .hero, section {
+
+
+/* 墨上花开书法品牌名 */
+.login-brand-name { font-family: "Ma Shan Zheng", cursive; font-size: 3.2em; letter-spacing: 0.15em; }
+@media (max-width: 768px) { .login-brand-name { font-size: 2.4em; } }
