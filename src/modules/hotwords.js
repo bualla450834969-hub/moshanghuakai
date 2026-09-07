@@ -1,0 +1,190 @@
+/**
+ * modules/hotwords.js
+ * 函数: renderHotwordTable, renderCategory, renderRanking, renderHistory, showKeywordTrend, filteredHotwords
+ * 依赖: ['hotwords']
+ */
+(function() {
+  'use strict';
+
+  // 去重：双平台合并导致同一关键词出现多次
+  function dedupHotwords(hw) {
+    const map = {};
+    (hw || []).forEach(function(h) {
+      if (map[h.keyword]) {
+        map[h.keyword].total += h.total;
+        map[h.keyword].max_like = Math.max(map[h.keyword].max_like, h.max_like);
+        map[h.keyword].collect_rate = Math.max(map[h.keyword].collect_rate, h.collect_rate);
+      } else {
+        map[h.keyword] = Object.assign({}, h);
+      }
+    });
+    return Object.values(map);
+  }
+
+  // renderHotwordTable
+  function renderHotwordTable(hw) {
+    hw = dedupHotwords(hw);
+    const sorted=[...hw].sort((a,b)=>b.total-a.total);
+    const satMap = {};
+    (DATA.saturation||[]).forEach(s=>satMap[s.keyword]=s.stage);
+    document.querySelector('#hotwordTable tbody').innerHTML=sorted.map((h,i)=>`
+      <tr><td>${i+1}</td><td><b style="color:var(--text);cursor:pointer;text-decoration:underline dotted" onclick="showKeywordTrend('${h.keyword.replace(/'/g,"\\'")}')" title="点击查看趋势">${h.keyword}</b></td><td>${h.category}</td><td>${h.total.toLocaleString()}</td><td class="like-num">${h.max_like.toLocaleString()}</td><td class="collect-num">${h.collect_rate}%</td><td><span class="tag ${trendClass(h.trend)}">${h.trend||'稳定'}</span></td><td><span class="tag ${satMap[h.keyword]==='萌芽期'?'sprout':satMap[h.keyword]==='上升期'?'rise':satMap[h.keyword]==='爆发期'?'boom':'decline'}">${satMap[h.keyword]||'稳定期'}</span></td><td><span class="tag ${h.efficiency_tag==='蓝海'?'blue-ocean':h.efficiency_tag==='红海'?'red-ocean':'medium'}">${h.efficiency_tag||'适中'}</span></td></tr>`).join('');
+  }
+
+  // renderCategory — 关键词优先级分布
+  function renderCategory(hw) {
+    hw = dedupHotwords(hw);
+    const catLabel = {
+      'S': 'S级·核心热词(每日)',
+      'A': 'A级·重要热词(隔日)',
+      'B': 'B级·一般热词(每3日)',
+      'C': 'C级·长尾冷词(每周)'
+    };
+    const m={}; hw.forEach(h=>{m[h.category]=(m[h.category]||0)+h.total;});
+    const data=Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({name:catLabel[n]||n,value:v}));
+    if (charts.category) charts.category.dispose();
+    charts.category=echarts.init(document.getElementById('chartCategory'));
+    charts.category.setOption({
+      color:PALETTE,
+      title:{text:'关键词优先级分布',subtext:'S/A/B/C = 采集频率分级',left:'center',top:5,textStyle:{color:'rgba(44,36,22,0.9)',fontSize:13,fontFamily:'serif'},subtextStyle:{color:'rgba(60,45,30,0.5)',fontSize:10}},
+      tooltip:{trigger:'item',backgroundColor:TOOLTIP_BG,borderColor:TOOLTIP_BORDER,textStyle:{color:TOOLTIP_TEXT},formatter:'{b}<br/>作品数 {c} ({d}%)'},
+      legend:{type:'scroll',orient:'vertical',right:5,top:'center',textStyle:{color:'rgba(60,45,30,0.7)',fontSize:10}},
+      series:[{type:'pie',radius:['38%','62%'],center:['38%','55%'],data,label:{color:'rgba(60,45,30,0.7)',fontSize:10,formatter:'{d}%'},itemStyle:{borderColor:'rgba(240,232,213,0.8)',borderWidth:2},animationDuration:1200}]
+    });
+  }
+
+  // renderRanking
+  function renderRanking(hw) {
+    hw = dedupHotwords(hw);
+    const sorted=[...hw].sort((a,b)=>b.total-a.total).slice(0,15);
+    if (charts.ranking) charts.ranking.dispose();
+    charts.ranking=echarts.init(document.getElementById('chartRanking'));
+    charts.ranking.setOption({color:PALETTE,grid:{left:90,right:50,top:10,bottom:20},xAxis:{type:'value',axisLabel:{color:AXIS_COLOR,formatter:v=>v>=10000?(v/10000).toFixed(0)+'万':v},splitLine:{lineStyle:{color:SPLIT_COLOR}}},yAxis:{type:'category',data:sorted.map(d=>d.keyword).reverse(),axisLabel:{color:'rgba(60,45,30,0.8)',fontSize:11},axisLine:{lineStyle:{color:AXIS_LINE}}},series:[{type:'bar',data:sorted.map(d=>d.total).reverse(),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#8b0000'},{offset:1,color:'#b8860b'}]),borderRadius:[0,4,4,0]},label:{show:true,position:'right',formatter:p=>p.value>=10000?(p.value/10000).toFixed(1)+'万':p.value,fontSize:10,color:'rgba(60,45,30,0.7)'},animationDuration:1200,animationEasing:'cubicOut'}],tooltip:{trigger:'axis',backgroundColor:TOOLTIP_BG,borderColor:TOOLTIP_BORDER,textStyle:{color:TOOLTIP_TEXT},formatter:p=>`${p[0].name}<br/>作品总数 ${p[0].value.toLocaleString()}`}});
+  }
+
+  // renderHistory
+  function renderHistory(hw) {
+    const hist = DATA.historical_trend || [];
+    if (charts.hist) charts.hist.dispose();
+    charts.hist = echarts.init(document.getElementById('chartHistory'));
+    if (hist.length < 2) {
+      charts.hist.setOption({title:{text:'数据积累中，跑满 2 天后显示趋势曲线',left:'center',top:'center',textStyle:{color:AXIS_COLOR,fontSize:13,fontWeight:'normal'}}});
+      return;
+    }
+    // 合并每天的重复关键词（双平台未合并问题）
+    const mergedHist = hist.map(h => {
+      const map = {};
+      h.hotwords.forEach(x => {
+        if (map[x.keyword]) map[x.keyword] += x.total;
+        else map[x.keyword] = x.total;
+      });
+      return { date: h.date, hotwords: Object.keys(map).map(k => ({keyword:k, total:map[k]})) };
+    });
+    const dates = mergedHist.map(h => h.date.slice(5));
+    // 收集所有出现过的关键词，计算波动率（排除超大词AI避免压缩Y轴）
+    const kwSet = new Set();
+    mergedHist.forEach(h => h.hotwords.forEach(x => kwSet.add(x.keyword)));
+    const kwVolatility = [];
+    kwSet.forEach(kw => {
+      if (cfg('exclude_keywords', ['AI']).includes(kw)) return; // 排除超大词
+      const vals = mergedHist.map(h => {
+        const f = h.hotwords.find(x => x.keyword === kw);
+        return f ? f.total : null;
+      }).filter(v => v !== null);
+      if (vals.length < 2) return;
+      const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+      if (avg < 10) return; // 排除过小词
+      const variance = vals.reduce((s,v) => s + Math.pow(v-avg,2), 0) / vals.length;
+      const cv = Math.sqrt(variance) / avg; // 变异系数
+      kwVolatility.push({ kw, cv, avg, vals });
+    });
+    // 按波动率排序取TOP5，同时确保至少有数据
+    kwVolatility.sort((a,b) => b.cv - a.cv);
+    let topKws = kwVolatility.slice(0,5).map(x => x.kw);
+    // 如果波动率不足5个，补充当前热门词
+    if (topKws.length < 5) {
+      const currentTop = [...hw].sort((a,b) => b.total-a.total).map(h => h.keyword).filter(k => !cfg('exclude_keywords', ['AI']).includes(k) && !topKws.includes(k));
+      topKws = topKws.concat(currentTop).slice(0,5);
+    }
+    const series = topKws.map((kw,i) => {
+      const vals = mergedHist.map(h => {
+        const f = h.hotwords.find(x => x.keyword === kw);
+        return f ? f.total : null;
+      });
+      return {
+        name: kw, type: 'line', smooth: true, symbol: 'circle', symbolSize: 6,
+        data: vals,
+        lineStyle: { width: 2 }, itemStyle: { color: PALETTE[i % PALETTE.length] },
+        connectNulls: true,
+      };
+    });
+    charts.hist.setOption({
+      color: PALETTE,
+      tooltip: { trigger: 'axis', backgroundColor: TOOLTIP_BG, borderColor: TOOLTIP_BORDER, textStyle: { color: TOOLTIP_TEXT } },
+      legend: { data: topKws, textStyle: { color: 'rgba(60,45,30,0.8)', fontSize: 11 }, top: 0 },
+      grid: { left: 60, right: 20, top: 40, bottom: 30 },
+      xAxis: { type: 'category', data: dates, axisLabel: { color: AXIS_COLOR }, axisLine: { lineStyle: { color: AXIS_LINE } } },
+      yAxis: { type: 'value', axisLabel: { color: AXIS_COLOR, formatter: v => v >= 10000 ? (v/10000).toFixed(0) + '万' : v }, splitLine: { lineStyle: { color: SPLIT_COLOR } } },
+      series
+    });
+  }
+
+  // showKeywordTrend
+  function showKeywordTrend(keyword) {
+    const trends = DATA.keyword_trends || {};
+    const t = trends[keyword];
+    const modal = document.getElementById('trendModal');
+    document.getElementById('trendModalTitle').textContent = keyword + ' · 热度趋势';
+    if (!t || !t.data || t.data.length < 2) {
+      document.getElementById('trendModalBody').innerHTML = '<p style="color:var(--text-secondary)">历史数据不足，需积累更多天数据后显示趋势曲线。</p>';
+    } else {
+      const maxVal = Math.max(...t.data.map(d=>d.total), 1);
+      let bars = '<div style="display:flex;align-items:flex-end;gap:6px;height:160px;margin-top:12px">';
+      t.data.forEach(d => {
+        const h = Math.round(d.total/maxVal*100);
+        const dir = t.direction==='up' ? '#4ade80' : t.direction==='down' ? '#f87171' : '#facc15';
+        bars += '<div style="flex:1;text-align:center"><div style="height:'+h+'%;background:linear-gradient(180deg,'+dir+','+dir+'66);border-radius:4px 4px 0 0;min-height:4px" title="'+d.date+': '+d.total.toLocaleString()+'"></div><div style="font-size:10px;color:var(--text-secondary);margin-top:4px">'+d.date.slice(5)+'</div></div>';
+      });
+      bars += '</div>';
+      const growthColor = t.growth>0 ? '#4ade80' : t.growth<0 ? '#f87171' : 'var(--text-secondary)';
+      bars += '<div style="margin-top:12px;font-size:14px">周期变化：<b style="color:'+growthColor+'">'+(t.growth>0?'+':'')+t.growth+'%</b> · '+ (t.direction==='up'?'上升期':t.direction==='down'?'衰退期':'平台期') +'</div>';
+      document.getElementById('trendModalBody').innerHTML = bars;
+    }
+    modal.classList.add('active');
+  }
+
+  // filteredHotwords
+  // 去重合并同关键词（抖音+小红书）
+  function mergeHotwords(list) {
+    const map = {};
+    list.forEach(function(h) {
+      if (!map[h.keyword]) { map[h.keyword] = Object.assign({}, h); return; }
+      const m = map[h.keyword];
+      m.total = (m.total||0) + (h.total||0);
+      m.max_like = Math.max(m.max_like||0, h.max_like||0);
+      m.collect_rate = Math.round(((m.collect_rate||0) + (h.collect_rate||0)) / 2);
+      if (h.trend && (!m.trend || h.trend === '飙升')) m.trend = h.trend;
+      if (h.efficiency_tag && (!m.efficiency_tag || h.efficiency_tag === '蓝海')) m.efficiency_tag = h.efficiency_tag;
+    });
+    return Object.values(map);
+  }
+
+  function filteredHotwords() { const p = filterByPlatform(DATA.hotwords||[]); const merged = mergeHotwords(p); return currentCategory==='all' ? merged : merged.filter(h=>h.category===currentCategory); }
+
+  // 模块注册
+  if (window.Module) {
+    Module.register({
+      id: "hotwords",
+      requiredFields: ['hotwords'],
+      render: function(data) {
+        try { renderHotwordTable(data); renderCategory(data); renderRanking(data); renderHistory(data); } catch(e) { console.error("[hotwords]", e); }
+      }
+    });
+  }
+  window.renderHotwordTable = renderHotwordTable;
+  window.renderCategory = renderCategory;
+  window.renderRanking = renderRanking;
+  window.renderHistory = renderHistory;
+  window.showKeywordTrend = showKeywordTrend;
+  window.filteredHotwords = filteredHotwords;
+})();
