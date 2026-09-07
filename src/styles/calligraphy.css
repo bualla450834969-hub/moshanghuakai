@@ -251,9 +251,16 @@ button, .btn, [class*="button"] {
 .login-screen .login-logo-svg {
   filter: drop-shadow(0 0 20px rgba(255, 200, 60, 0.25)) drop-shadow(0 0 40px rgba(255, 180, 40, 0.15));
 }
+/* 玻璃块默认金色边框（覆盖login.css的白色stroke） */
+.login-screen .login-glass {
+  stroke: rgba(232,197,71,0.6) !important;
+  stroke-width: 1.5 !important;
+  transition: stroke 0.3s ease, stroke-width 0.3s ease;
+}
 /* 玻璃块悬停效果 */
 .login-screen .login-glass:hover {
   stroke: #ffd700 !important;
+  stroke-width: 2 !important;
 }
 
 /* 登录页文字 — 金色 */
