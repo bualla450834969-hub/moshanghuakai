@@ -95,7 +95,7 @@
         </div>
         <div class="brand-slide brand-slide-text" id="brandSlideText">
           <div class="sidebar-brand-text">
-            <div class="sb-brand-name">PYRALUMA</div>
+            <div class="sb-brand-name" style="font-family:'Ma Shan Zheng',cursive;">墨上花开</div>
             <div class="sb-brand-tag">热点追踪工作台</div>
           </div>
         </div>
