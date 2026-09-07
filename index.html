@@ -17,6 +17,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<script>
+  // SafeGuard: 全局错误兜底，防止单个模块崩溃导致整页白屏
+  (function(){
+    window.onerror = function(msg, url, line, col, err){
+      console.error('[SafeGuard]', msg, url+':'+line+':'+col, err);
+      return true;
+    };
+    window.addEventListener('unhandledrejection', function(e){
+      console.error('[SafeGuard Promise]', e.reason);
+    });
+    window.safeCall = function(fn, fallback){
+      try { return fn(); } catch(e) { console.warn('[safeCall]', e); return fallback; }
+    };
+  })();
+</script>
 </head>
 
 <div class="login-screen" id="loginScreen">
@@ -732,5 +747,17 @@
       setTimeout(checkAndLoad, 5000);
     })();
   </script>
+
+    <section class="section" id="anomalyDetection">
+      <div class="section-title"><span class="section-num">09</span><h2>数据异常检测</h2><span class="section-sub">自动标记异常涨跌 · 抓住机会规避风险</span></div>
+      <div class="card glass-card" id="anomalyList"></div>
+    </section>
+    <section class="section" id="ownPerformance">
+      <div class="section-title"><span class="section-num">10</span><h2>自有数据回传</h2><span class="section-sub">飞书多维表格同步 · 发布后真实表现追踪</span></div>
+      <div class="card glass-card" id="ownPerfList"></div>
+    </section>
+
+<script src="src/modules/advancedAnalytics.js?v=1788758417"></script>
+<script src="src/modules/opsStatus.js?v=1788758417"></script>
 </body>
 </html>
