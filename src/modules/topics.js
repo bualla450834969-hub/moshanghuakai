@@ -26,6 +26,7 @@
         ${t.smart_priority ? '<span class="smart-priority ' + (t.smart_priority>=60?'high':t.smart_priority>=40?'mid':'low') + '" title="信息差'+(t.priority_breakdown?.info_gap||0)+' 热度'+(t.priority_breakdown?.heat||0)+' 低竞争'+(t.priority_breakdown?.low_competition||0)+'">智能 ' + t.smart_priority + '</span>' : ''}
         ${t.content_type ? '<span class="content-type-tag '+t.content_type+'">'+t.content_type+'</span>' : ''}${t.is_info_gap ? '<div class="info-gap-badge">💎 信息差</div>' : (t.is_forecast ? '<div class="forecast-badge">🔮 前瞻</div>' : '')}
         <div class="tc-title">${t.title}</div>
+        ${t.heat_phase ? '<span class="heat-phase-badge ' + (t.heat_phase_color || '') + '">' + t.heat_phase + '</span>' : ''}
         <div class="tc-hook">${t.hook}</div>\n      ${t.guide_comment ? '<div class="guide-comment">💬 小号引导：' + t.guide_comment + '</div>' : ''}
         <div style="display:flex;align-items:center;gap:12px;margin:6px 0">
           <div><span class="topic-score">${score.total}</span><span class="topic-score-label"> 综合分</span></div>
@@ -49,6 +50,7 @@
           <div class="cp-row"><span class="cp-label">对应产品：</span>${t.conversion_path.product_match}</div>
           <div class="cp-row"><span class="cp-label">漏斗：</span>${t.conversion_path.funnel_step}</div>
         </div>` : ''}
+        ${t.differentiated_angles && t.differentiated_angles.length ? '<div class="differentiated-angles"><div class="da-label">差异化角度</div>' + t.differentiated_angles.slice(0,3).map(function(a,ai){return '<div class="da-item"><span class="da-num">'+(ai+1)+'</span>'+a+'</div>'}).join('') + '</div>' : ''}
         ${t.target_persona ? `<div class="topic-persona">
           <div class="tp-name">目标人群：${t.target_persona.name} · ${t.target_persona.age} · ${t.target_persona.gender}</div>
           <div class="tp-needs">${(t.target_persona.needs||[]).slice(0,4).map(n=>'<span class="tp-need">'+n+'</span>').join('')}</div>
@@ -64,6 +66,7 @@
           }
           return '<div style="margin-top:6px;"><button onclick="event.stopPropagation();recordPerf(\''+t.title.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:none;background:rgba(245,158,11,0.15);color:#fbbf24;cursor:pointer;">📊 记录发布效果</button></div>';
         })() : ''}
+        <button class="copy-topic-btn" data-idx="${i}">📋 复制标题+钩子</button>
         <div class="title-variants">
           <div class="tv-label">A/B标题变体（点击复制）：</div>
           ${genTitleVariants(t.title).map(function(v,vi){
@@ -305,6 +308,28 @@
     document.getElementById('shootModalBody').innerHTML = html;
     document.getElementById('shootModal').classList.add('active');
   }
+
+
+  // 一键复制标题+钩子
+  function copyTopicText(idx) {
+    try {
+      var topics = filteredTopics();
+      var t = topics[idx];
+      if (!t) return;
+      navigator.clipboard.writeText(t.title + '\n\n钩子：' + t.hook);
+      var btn = document.querySelector('.copy-topic-btn[data-idx="'+idx+'"]');
+      if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = '✅ 已复制';
+        btn.style.background = 'rgba(16,185,129,0.2)';
+        setTimeout(function(){ btn.textContent = orig; btn.style.background = ''; }, 1500);
+      }
+    } catch(e) { console.warn('[copy]', e); }
+  }
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.copy-topic-btn');
+    if (btn) { e.stopPropagation(); copyTopicText(parseInt(btn.dataset.idx)); }
+  });
 
   // 模块注册
   if (window.Module) {
