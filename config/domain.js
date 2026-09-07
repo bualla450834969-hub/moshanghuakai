@@ -13,8 +13,8 @@ window.DOMAIN_CONFIG = {
 
   // ===== 品牌配置 =====
   brand: {
-    name_en: 'PYRALUMA',
-    name_cn: '璃火矩创',
+    name_en: '墨上花开',
+    name_cn: '墨上花开',
     slogan: 'Calligraphy Intelligence',
     logo_type: 'shapes',
   },
